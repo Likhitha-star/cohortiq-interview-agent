@@ -23,6 +23,11 @@ interface InterviewResponse {
   reply: string;
   done: boolean;
   feedback?: InterviewFeedback;
+  questionNumber?: number;
+  totalQuestions?: number;
+  day?: number;
+  dayTitle?: string;
+  isFollowUp?: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -49,7 +54,17 @@ function toInterviewResponse(
   const response: InterviewResponse = {
     reply: result.reply,
     done: result.done,
+    questionNumber: result.state.questionCount,
+    totalQuestions: 8,
   };
+
+  const currentQuestion = result.state.currentQuestion;
+
+  if (currentQuestion) {
+    response.day = currentQuestion.day;
+    response.dayTitle = currentQuestion.dayTitle;
+    response.isFollowUp = currentQuestion.kind === "follow_up";
+  }
 
   if (result.done && result.feedback) {
     response.feedback = result.feedback;
@@ -57,7 +72,6 @@ function toInterviewResponse(
 
   return response;
 }
-
 export async function POST(
   request: NextRequest,
 ): Promise<NextResponse> {
