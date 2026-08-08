@@ -5,6 +5,13 @@ import type { KeyboardEvent } from "react";
 
 type Feedback = {
   summary: string;
+  scores: {
+    overall: number;
+    technicalKnowledge: number;
+    implementationDepth: number;
+    problemSolving: number;
+    communication: number;
+  };
   strengths: string[];
   gaps: string[];
   next: string[];
@@ -52,7 +59,8 @@ export default function Home() {
   const [error, setError] = useState("");
 
   const [questionNumber, setQuestionNumber] = useState(1);
-  const [totalQuestions] = useState(8);
+  const totalQuestions = 8;
+
   const [currentDay, setCurrentDay] = useState<number | null>(null);
   const [currentDayTitle, setCurrentDayTitle] = useState("");
   const [isFollowUp, setIsFollowUp] = useState(false);
@@ -71,6 +79,7 @@ export default function Home() {
     setError("");
     setFeedback(null);
     setMessages([]);
+    setAnswer("");
 
     setQuestionNumber(1);
     setCurrentDay(null);
@@ -122,7 +131,9 @@ export default function Home() {
       ]);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to start interview.",
+        err instanceof Error
+          ? err.message
+          : "Failed to start interview.",
       );
     } finally {
       setLoading(false);
@@ -187,7 +198,9 @@ export default function Home() {
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to submit answer.",
+        err instanceof Error
+          ? err.message
+          : "Failed to submit answer.",
       );
     } finally {
       setLoading(false);
@@ -216,23 +229,22 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* TOP BAR */}
-        <header className="mb-8 flex flex-col gap-4 border-b border-slate-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500 font-bold text-slate-950">
-                C
-              </div>
+        <header className="mb-8 flex items-center justify-between border-b border-slate-800 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500 font-black text-slate-950">
+              C
+            </div>
 
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">
-                  CohortIQ
-                </h1>
-                <p className="text-xs text-slate-500">
-                  AI Interview Agent
-                </p>
-              </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">
+                CohortIQ
+              </h1>
+
+              <p className="text-xs text-slate-500">
+                AI Interview Agent
+              </p>
             </div>
           </div>
 
@@ -252,7 +264,7 @@ export default function Home() {
           )}
         </header>
 
-        {/* LANDING / START SCREEN */}
+        {/* LANDING PAGE */}
         {!started && (
           <div className="mx-auto max-w-5xl">
             <section className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
@@ -298,6 +310,7 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* START CARD */}
               <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl shadow-black/20">
                 <div className="mb-6">
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
@@ -707,6 +720,7 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* OVERALL ASSESSMENT */}
                   <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950 p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-500">
                       Overall assessment
@@ -717,26 +731,101 @@ export default function Home() {
                     </p>
                   </div>
 
+                  {/* SCORES */}
+                  <div className="mt-5">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-cyan-400">
+                      Interview Scores
+                    </h3>
+
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                        <p className="text-2xl font-bold text-cyan-400">
+                          {feedback.scores.overall}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          Overall
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                        <p className="text-2xl font-bold text-cyan-400">
+                          {feedback.scores.technicalKnowledge}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          Technical Knowledge
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                        <p className="text-2xl font-bold text-violet-400">
+                          {feedback.scores.implementationDepth}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          Implementation Depth
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                        <p className="text-2xl font-bold text-amber-400">
+                          {feedback.scores.problemSolving}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          Problem Solving
+                        </p>
+                      </div>
+
+                      <div className="col-span-2 rounded-xl border border-slate-800 bg-slate-950 p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-2xl font-bold text-emerald-400">
+                              {feedback.scores.communication}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              Communication
+                            </p>
+                          </div>
+
+                          <p className="text-xs text-slate-600">
+                            Score / 100
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* STRENGTHS */}
                   <div className="mt-5">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-400">
                       Strengths
                     </h3>
 
                     <ul className="mt-3 space-y-2">
-                      {feedback.strengths.map((item, index) => (
-                        <li
-                          key={index}
-                          className="rounded-lg bg-emerald-500/5 px-3 py-2.5 text-xs leading-5 text-slate-300"
-                        >
-                          <span className="mr-2 text-emerald-400">
-                            ✓
-                          </span>
-                          {item}
+                      {feedback.strengths.length > 0 ? (
+                        feedback.strengths.map((item, index) => (
+                          <li
+                            key={index}
+                            className="rounded-lg bg-emerald-500/5 px-3 py-2.5 text-xs leading-5 text-slate-300"
+                          >
+                            <span className="mr-2 text-emerald-400">
+                              ✓
+                            </span>
+                            {item}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="rounded-lg bg-slate-950 px-3 py-2.5 text-xs text-slate-400">
+                          No strengths identified.
                         </li>
-                      ))}
+                      )}
                     </ul>
                   </div>
 
+                  {/* GAPS */}
                   <div className="mt-5">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400">
                       Gaps
@@ -763,6 +852,7 @@ export default function Home() {
                     </ul>
                   </div>
 
+                  {/* NEXT STEPS */}
                   <div className="mt-5">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-violet-400">
                       Recommended next steps
@@ -789,6 +879,7 @@ export default function Home() {
                     </ul>
                   </div>
 
+                  {/* NEW INTERVIEW */}
                   <button
                     onClick={resetInterview}
                     className="mt-6 w-full rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:border-cyan-500/40 hover:bg-slate-950 hover:text-white"
@@ -804,8 +895,13 @@ export default function Home() {
         {/* ERROR */}
         {error && (
           <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
-            <div className="font-semibold">Something went wrong</div>
-            <p className="mt-1 text-red-300/80">{error}</p>
+            <div className="font-semibold">
+              Something went wrong
+            </div>
+
+            <p className="mt-1 text-red-300/80">
+              {error}
+            </p>
           </div>
         )}
       </div>
