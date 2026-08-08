@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { generateAIFeedback } from "@/lib/ai/claude";
 import { getCandidateById } from "@/lib/data/candidates";
 import {
   startInterview,
@@ -10,10 +11,14 @@ import {
 } from "@/lib/interview/engine";
 import type { Candidate } from "@/lib/types";
 
-/** In-memory session store — lives for the duration of the running server process. */
+/**
+ * In-memory session store — lives for the duration of the running server process.
+ */
 const sessions = new Map<string, InterviewState>();
 
-/** Response shape defined in data/technical-spec.md */
+/**
+ * Response shape defined in data/technical-spec.md
+ */
 interface InterviewResponse {
   reply: string;
   done: boolean;
@@ -30,6 +35,7 @@ function isCandidate(value: unknown): value is Candidate {
   }
 
   const member = value.member;
+
   if (!isRecord(member) || typeof member.id !== "string") {
     return false;
   }
@@ -37,7 +43,9 @@ function isCandidate(value: unknown): value is Candidate {
   return Array.isArray(value.missions) && isRecord(value.signals);
 }
 
-function toInterviewResponse(result: InterviewTurnResult): InterviewResponse {
+function toInterviewResponse(
+  result: InterviewTurnResult,
+): InterviewResponse {
   const response: InterviewResponse = {
     reply: result.reply,
     done: result.done,
@@ -50,13 +58,18 @@ function toInterviewResponse(result: InterviewTurnResult): InterviewResponse {
   return response;
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(
+  request: NextRequest,
+): Promise<NextResponse> {
   let body: unknown;
 
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid JSON body." },
+      { status: 400 },
+    );
   }
 
   if (!isRecord(body)) {
@@ -67,16 +80,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const sessionId = body.sessionId;
-  if (typeof sessionId !== "string" || sessionId.trim().length === 0) {
-    return NextResponse.json({ error: "sessionId is required." }, { status: 400 });
+
+  if (
+    typeof sessionId !== "string" ||
+    sessionId.trim().length === 0
+  ) {
+    return NextResponse.json(
+      { error: "sessionId is required." },
+      { status: 400 },
+    );
   }
 
   const normalizedSessionId = sessionId.trim();
 
+  /**
+   * Start a new interview.
+   */
   if (body.candidate !== undefined) {
     if (sessions.has(normalizedSessionId)) {
       return NextResponse.json(
-        { error: "Interview session already exists for this sessionId." },
+        {
+          error:
+            "Interview session already exists for this sessionId.",
+        },
         { status: 409 },
       );
     }
@@ -99,16 +125,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     try {
-      const result = startInterview(normalizedSessionId, candidateId);
+      const result = startInterview(
+        normalizedSessionId,
+        candidateId,
+      );
+
       sessions.set(normalizedSessionId, result.state);
-      return NextResponse.json(toInterviewResponse(result));
+
+      return NextResponse.json(
+        toInterviewResponse(result),
+      );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to start interview.";
-      return NextResponse.json({ error: message }, { status: 500 });
+        error instanceof Error
+          ? error.message
+          : "Failed to start interview.";
+
+      return NextResponse.json(
+        { error: message },
+        { status: 500 },
+      );
     }
   }
 
+  /**
+   * Process a candidate answer.
+   */
   if (body.message !== undefined) {
     if (typeof body.message !== "string") {
       return NextResponse.json(
@@ -118,6 +160,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const state = sessions.get(normalizedSessionId);
+
     if (!state) {
       return NextResponse.json(
         { error: "Interview session not found." },
@@ -126,13 +169,63 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     try {
-      const result = submitAnswer(state, body.message);
-      sessions.set(normalizedSessionId, result.state);
-      return NextResponse.json(toInterviewResponse(result));
+      const result = submitAnswer(
+        state,
+        body.message,
+      );
+
+      let responseResult = result;
+
+      /**
+       * When the deterministic interview engine
+       * finishes the required interview, use Claude
+       * to generate richer technical feedback.
+       */
+      if (result.done) {
+        try {
+          const aiFeedback = await generateAIFeedback(
+            result.state,
+          );
+
+          responseResult = {
+            ...result,
+            feedback: aiFeedback,
+            state: {
+              ...result.state,
+              feedback: aiFeedback,
+            },
+          };
+        } catch (error) {
+          /**
+           * If Claude is unavailable or returns invalid
+           * data, keep the deterministic feedback from
+           * the existing interview engine.
+           */
+          console.error(
+            "AI feedback generation failed:",
+            error,
+          );
+        }
+      }
+
+      sessions.set(
+        normalizedSessionId,
+        responseResult.state,
+      );
+
+      return NextResponse.json(
+        toInterviewResponse(responseResult),
+      );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to process message.";
-      return NextResponse.json({ error: message }, { status: 500 });
+        error instanceof Error
+          ? error.message
+          : "Failed to process message.";
+
+      return NextResponse.json(
+        { error: message },
+        { status: 500 },
+      );
     }
   }
 
