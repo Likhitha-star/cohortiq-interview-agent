@@ -16,7 +16,8 @@ export async function askGroq(prompt: string): Promise<string> {
   const response = await groq.chat.completions.create({
     model: "openai/gpt-oss-20b",
     temperature: 0.2,
-    max_tokens: 1200,
+    max_completion_tokens: 2048,
+    reasoning_effort: "low",
     response_format: {
       type: "json_object",
     },
@@ -84,11 +85,13 @@ Return ONLY valid JSON in exactly this structure:
 }
 
 Requirements:
-- Be technically specific.
-- Do not invent experience that is not shown in the answers.
-- Focus on technical depth, reasoning, implementation understanding, and communication.
-- Keep each array between 2 and 5 items.
-- Keep the summary concise.
+
+- Use only evidence from the transcript.
+- Be technically specific but concise.
+- Keep the summary under 40 words.
+- Return exactly 2 items in each array.
+- Keep every array item under 20 words.
+- Do not invent experience.
 `;
 
   const response = await askGroq(prompt);
