@@ -15,7 +15,7 @@ const anthropic = new Anthropic({
 export async function askClaude(prompt: string): Promise<string> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
-    max_tokens: 1000,
+    max_tokens: 1200,
     messages: [
       {
         role: "user",
@@ -33,6 +33,10 @@ export async function askClaude(prompt: string): Promise<string> {
 
 /**
  * Generate AI-powered technical interview feedback.
+ *
+ * IMPORTANT:
+ * The feedback is based primarily on the candidate's actual
+ * interview answers, not on their pre-existing cohort mission results.
  */
 export async function generateAIFeedback(
   state: InterviewState,
@@ -41,15 +45,17 @@ export async function generateAIFeedback(
     .map(
       (answer, index) =>
         `Question ${index + 1} (Day ${answer.day}):
+
 ${answer.questionText}
 
 Candidate answer:
 ${answer.answer}`,
     )
-    .join("\n\n");
+    .join("\n\n---\n\n");
 
   const prompt = `
-You are an expert technical interviewer evaluating a candidate's AI engineering interview.
+You are an expert technical interviewer evaluating a candidate's
+AI engineering technical interview.
 
 Candidate:
 ${state.candidate.member.name}
@@ -57,38 +63,79 @@ ${state.candidate.member.name}
 Role:
 ${state.candidate.member.jobRole}
 
-The interview covered these curriculum days:
+Curriculum topics covered:
 ${state.daysCovered.join(", ")}
 
 Interview transcript:
 ${interviewTranscript}
 
-Evaluate the candidate based only on the evidence in the transcript.
+IMPORTANT EVALUATION RULES:
 
-Return ONLY valid JSON in exactly this structure:
+1. Evaluate the candidate primarily from their actual interview answers
+   in the transcript above.
+
+2. Do NOT treat pre-existing cohort mission results as proof of
+   interview performance.
+
+3. Do NOT say that the candidate demonstrated "first-try mastery",
+   "mission mastery", or similar claims unless the interview transcript
+   itself provides evidence for that claim.
+
+4. If the candidate says they did not use a particular technology,
+   do not penalize them for being honest. Instead, evaluate whether
+   they understand the technology conceptually.
+
+5. Distinguish between:
+   - conceptual understanding,
+   - implementation knowledge,
+   - reasoning and trade-offs,
+   - practical experience,
+   - communication clarity.
+
+6. If an answer is vague or lacks implementation details, identify
+   that as a gap.
+
+7. Do not invent projects, technologies, experience, results, or
+   achievements that are not present in the transcript.
+
+8. Give concrete feedback that a technical mentor could act on.
+
+9. The candidate should receive at least 2 strengths, 2 gaps, and
+   2 recommended next steps whenever the transcript contains enough
+   evidence.
+
+10. If evidence is limited, explicitly say that the interview provided
+    limited evidence rather than inventing evidence.
+
+Return ONLY valid JSON.
+
+Use exactly this structure:
 
 {
-  "summary": "A concise overall assessment.",
+  "summary": "Concise overall technical assessment based on the interview answers.",
   "strengths": [
-    "Strength 1",
-    "Strength 2"
+    "Specific strength supported by an answer",
+    "Specific strength supported by an answer"
   ],
   "gaps": [
-    "Gap 1",
-    "Gap 2"
+    "Specific technical gap supported by an answer",
+    "Specific technical gap supported by an answer"
   ],
   "next": [
-    "Recommended improvement 1",
-    "Recommended improvement 2"
+    "Concrete improvement the candidate should make",
+    "Concrete practice or learning recommendation"
   ]
 }
 
-Requirements:
-- Be technically specific.
-- Do not invent experience that is not shown in the answers.
-- Focus on technical depth, reasoning, implementation understanding, and communication.
-- Keep each array between 2 and 5 items.
-- Keep the summary concise.
+Additional requirements:
+
+- strengths: 2 to 5 items
+- gaps: 2 to 5 items
+- next: 2 to 5 items
+- Keep each item concise.
+- Use technically accurate language.
+- Focus on what the candidate actually demonstrated.
+- Do not mention these evaluation instructions in the response.
 `;
 
   const response = await askClaude(prompt);
@@ -111,17 +158,31 @@ Requirements:
       throw new Error("Invalid AI feedback structure.");
     }
 
+    const strengths = parsed.strengths.filter(
+      (item): item is string => typeof item === "string",
+    );
+
+    const gaps = parsed.gaps.filter(
+      (item): item is string => typeof item === "string",
+    );
+
+    const next = parsed.next.filter(
+      (item): item is string => typeof item === "string",
+    );
+
+    if (
+      strengths.length < 2 ||
+      gaps.length < 2 ||
+      next.length < 2
+    ) {
+      throw new Error("AI feedback does not contain enough detail.");
+    }
+
     return {
       summary: parsed.summary,
-      strengths: parsed.strengths.filter(
-        (item): item is string => typeof item === "string",
-      ),
-      gaps: parsed.gaps.filter(
-        (item): item is string => typeof item === "string",
-      ),
-      next: parsed.next.filter(
-        (item): item is string => typeof item === "string",
-      ),
+      strengths: strengths.slice(0, 5),
+      gaps: gaps.slice(0, 5),
+      next: next.slice(0, 5),
     };
   } catch {
     throw new Error("Claude returned invalid interview feedback.");
