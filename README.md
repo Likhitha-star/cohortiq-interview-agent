@@ -7,7 +7,7 @@ The system analyzes a candidate's cohort progress, selects relevant curriculum t
 ## Live Demo
 
 **Live Application:**  
-cohortiq-interview-agent.vercel.app
+https://cohortiq-interview-agent.vercel.app
 
 ## GitHub Repository
 
